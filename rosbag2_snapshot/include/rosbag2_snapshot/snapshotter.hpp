@@ -43,6 +43,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <shared_mutex>
 
 namespace rosbag2_snapshot
 {
@@ -201,10 +202,12 @@ private:
   SnapshotterTopicOptions options_;
   // Current total size of the queue, in bytes
   int64_t size_;
-  typedef std::deque<SnapshotMessage> queue_t;
-  queue_t queue_;
   // Subscriber to the callback which uses this queue
   std::shared_ptr<rclcpp::GenericSubscription> sub_;
+
+protected:
+  typedef std::deque<SnapshotMessage> queue_t;
+  queue_t queue_;
 
 public:
   explicit MessageQueue(const SnapshotterTopicOptions & options, const rclcpp::Logger & logger);
@@ -229,15 +232,15 @@ public:
   int64_t getMessageSize(SnapshotMessage const & msg) const;
 
 protected:
-  rclcpp::Time get_oldest_message_time();
+  virtual rclcpp::Time get_oldest_message_time();
+  // Internal push whitch does not obtain lock
+  virtual void _push(SnapshotMessage const & msg);
+  // Internal pop which does not obtain lock
+  virtual SnapshotMessage _pop();
+  // Internal clear which does not obtain lock
+  virtual void _clear();
 
 private:
-  // Internal push whitch does not obtain lock
-  void _push(SnapshotMessage const & msg);
-  // Internal pop which does not obtain lock
-  SnapshotMessage _pop();
-  // Internal clear which does not obtain lock
-  void _clear();
   // Truncate front of queue as needed to fit a new message of specified size and time.
   // Returns False if this is impossible.
   bool preparePush(int32_t size, rclcpp::Time const & time);
@@ -254,11 +257,14 @@ public:
   explicit Snapshotter(const rclcpp::NodeOptions & options);
   ~Snapshotter();
 
+protected:
+  typedef std::map<TopicDetails, std::shared_ptr<MessageQueue>> buffers_t;
+  buffers_t & get_message_queue_map(){ return this->buffers_; }
+
 private:
   // Subscribe queue size for each topic
   static const int QUEUE_SIZE;
   SnapshotterOptions options_;
-  typedef std::map<TopicDetails, std::shared_ptr<MessageQueue>> buffers_t;
   buffers_t buffers_;
   // Locks recording_ and writing_ states.
   std::shared_mutex state_lock_;
