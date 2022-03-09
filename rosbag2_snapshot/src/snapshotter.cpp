@@ -405,6 +405,11 @@ MessageQueue::range_t MessageQueue::rangeFromTimes(Time const & start, Time cons
 }
 
 const int Snapshotter::QUEUE_SIZE = 10;
+ 
+MessageQueue * Snapshotter::create_message_queue(const SnapshotterTopicOptions & options)
+{
+  return new MessageQueue(options, this->get_logger());
+}
 
 Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
 : rclcpp::Node("snapshotter", options),
@@ -418,7 +423,7 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
     string topic{pair.first.name}, type{pair.first.type};
     fixTopicOptions(pair.second);
     shared_ptr<MessageQueue> queue;
-    queue.reset(new MessageQueue(pair.second, get_logger()));
+    queue.reset(this->create_message_queue(pair.second));
 
     TopicDetails details{};
     details.name = topic;

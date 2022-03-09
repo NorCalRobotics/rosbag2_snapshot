@@ -260,6 +260,7 @@ public:
 protected:
   typedef std::map<TopicDetails, std::shared_ptr<MessageQueue>> buffers_t;
   buffers_t & get_message_queue_map(){ return this->buffers_; }
+  virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
 
 private:
   // Subscribe queue size for each topic
