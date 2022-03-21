@@ -193,7 +193,7 @@ class MessageQueue
   friend Snapshotter;
   friend MessageQueueCollectionManager;
 
-private:
+protected:
   // Logger for outputting ROS logging messages
   rclcpp::Logger logger_;
   // Locks access to size_ and queue_
@@ -205,7 +205,6 @@ private:
   // Subscriber to the callback which uses this queue
   std::shared_ptr<rclcpp::GenericSubscription> sub_;
 
-protected:
   typedef std::deque<SnapshotMessage> queue_t;
   queue_t queue_;
 
@@ -261,11 +260,17 @@ protected:
   typedef std::map<TopicDetails, std::shared_ptr<MessageQueue>> buffers_t;
   buffers_t & get_message_queue_map(){ return this->buffers_; }
   virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
+  SnapshotterOptions options_;
+  // Convert parameter values into a SnapshotterOptions object
+  void parseOptionsFromParams();
+  // Called on new message from any configured topic. Adds to queue for that topic
+  void topicCb(
+    std::shared_ptr<const rclcpp::SerializedMessage> msg,
+    std::shared_ptr<MessageQueue> queue);
 
 private:
   // Subscribe queue size for each topic
   static const int QUEUE_SIZE;
-  SnapshotterOptions options_;
   buffers_t buffers_;
   // Locks recording_ and writing_ states.
   std::shared_mutex state_lock_;
@@ -278,8 +283,6 @@ private:
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_server_;
   rclcpp::TimerBase::SharedPtr poll_topic_timer_;
 
-  // Convert parameter values into a SnapshotterOptions object
-  void parseOptionsFromParams();
   // Replace individual topic limits with node defaults if they are
   // flagged for it (see SnapshotterTopicOptions)
   void fixTopicOptions(SnapshotterTopicOptions & options);
@@ -293,10 +296,6 @@ private:
   // Subscribe to one of the topics, setting up the callback to add to the respective queue
   void subscribe(
     const TopicDetails & topic_details,
-    std::shared_ptr<MessageQueue> queue);
-  // Called on new message from any configured topic. Adds to queue for that topic
-  void topicCb(
-    std::shared_ptr<const rclcpp::SerializedMessage> msg,
     std::shared_ptr<MessageQueue> queue);
   // Service callback, write all of part of the internal buffers to a bag file
   // according to request parameters
