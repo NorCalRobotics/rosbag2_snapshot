@@ -406,11 +406,6 @@ MessageQueue::range_t MessageQueue::rangeFromTimes(Time const & start, Time cons
 
 const int Snapshotter::QUEUE_SIZE = 10;
  
-MessageQueue * Snapshotter::create_message_queue(const SnapshotterTopicOptions & options)
-{
-  return new MessageQueue(options, this->get_logger());
-}
-
 Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
 : rclcpp::Node("snapshotter", options),
   recording_(true),
@@ -422,14 +417,16 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
   for (auto & pair : options_.topics_) {
     string topic{pair.first.name}, type{pair.first.type};
     fixTopicOptions(pair.second);
-    shared_ptr<MessageQueue> queue;
+    msg_queue_t queue;
     queue.reset(this->create_message_queue(pair.second));
 
     TopicDetails details{};
     details.name = topic;
     details.type = type;
+
     std::pair<buffers_t::iterator, bool> res =
       buffers_.emplace(details, queue);
+
     assert(res.second);
 
     subscribe(details, queue);
@@ -665,6 +662,11 @@ bool Snapshotter::writeTopic(
   return true;
 }
 
+MessageQueue * Snapshotter::create_message_queue(const SnapshotterTopicOptions & options)
+{
+  return new MessageQueue(options, this->get_logger());
+}
+
 void Snapshotter::triggerSnapshotCb(
   const std::shared_ptr<rmw_request_id_t> request_header,
   const TriggerSnapshot::Request::SharedPtr req,
@@ -835,10 +837,12 @@ void Snapshotter::pollTopics()
     if (options_.addTopic(details)) {
       SnapshotterTopicOptions topic_options;
       fixTopicOptions(topic_options);
-      auto queue = std::make_shared<MessageQueue>(topic_options, get_logger());
+      msg_queue_t queue;
+      queue.reset(this->create_message_queue(topic_options));
 
       std::pair<buffers_t::iterator,
         bool> res = buffers_.emplace(details, queue);
+
       assert(res.second);
       subscribe(details, queue);
     }

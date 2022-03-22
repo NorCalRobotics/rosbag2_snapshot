@@ -257,7 +257,8 @@ public:
   ~Snapshotter();
 
 protected:
-  typedef std::map<TopicDetails, std::shared_ptr<MessageQueue>> buffers_t;
+  typedef std::shared_ptr<MessageQueue> msg_queue_t;
+  typedef std::map<TopicDetails, msg_queue_t> buffers_t;
   buffers_t & get_message_queue_map(){ return this->buffers_; }
   virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
   SnapshotterOptions options_;
@@ -266,7 +267,7 @@ protected:
   // Called on new message from any configured topic. Adds to queue for that topic
   void topicCb(
     std::shared_ptr<const rclcpp::SerializedMessage> msg,
-    std::shared_ptr<MessageQueue> queue);
+    msg_queue_t queue);
 
 private:
   // Subscribe queue size for each topic
