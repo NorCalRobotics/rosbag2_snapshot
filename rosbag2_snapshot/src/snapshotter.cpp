@@ -404,9 +404,10 @@ MessageQueue::range_t MessageQueue::rangeFromTimes(Time const & start, Time cons
   return range_t(begin, end);
 }
 
-const int Snapshotter::QUEUE_SIZE = 10;
+template <class TMessageQueue> const int Snapshotter<TMessageQueue>::QUEUE_SIZE = 10;
+template const int Snapshotter<MessageQueue>::QUEUE_SIZE;
  
-Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
+template <class TMessageQueue> Snapshotter<TMessageQueue>::Snapshotter(const rclcpp::NodeOptions & options)
 : rclcpp::Node("snapshotter", options),
   recording_(true),
   writing_(false)
@@ -424,8 +425,8 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
     details.name = topic;
     details.type = type;
 
-    std::pair<buffers_t::iterator, bool> res =
-      buffers_.emplace(details, queue);
+    
+    auto res = buffers_.emplace(details, queue);
 
     assert(res.second);
 
@@ -446,15 +447,17 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
       std::bind(&Snapshotter::pollTopics, this));
   }
 }
+template Snapshotter<MessageQueue>::Snapshotter(const rclcpp::NodeOptions & options);
 
-Snapshotter::~Snapshotter()
+template <class TMessageQueue> Snapshotter<TMessageQueue>::~Snapshotter()
 {
   for (auto & buffer : buffers_) {
     buffer.second->sub_.reset();
   }
 }
+template Snapshotter<MessageQueue>::~Snapshotter();
 
-void Snapshotter::parseOptionsFromParams()
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::parseOptionsFromParams()
 {
   std::vector<std::string> topics{};
 
@@ -552,8 +555,9 @@ void Snapshotter::parseOptionsFromParams()
     RCLCPP_WARN(get_logger(), "Logging all topics is very memory-intensive.");
   }
 }
+template void Snapshotter<MessageQueue>::parseOptionsFromParams();
 
-void Snapshotter::fixTopicOptions(SnapshotterTopicOptions & options)
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::fixTopicOptions(SnapshotterTopicOptions & options)
 {
   if (options.duration_limit_ == SnapshotterTopicOptions::INHERIT_DURATION_LIMIT) {
     options.duration_limit_ = options_.default_duration_limit_;
@@ -562,8 +566,9 @@ void Snapshotter::fixTopicOptions(SnapshotterTopicOptions & options)
     options.memory_limit_ = options_.default_memory_limit_;
   }
 }
+template void Snapshotter<MessageQueue>::fixTopicOptions(SnapshotterTopicOptions & options);
 
-bool Snapshotter::postfixFilename(string & file)
+template <class TMessageQueue> bool Snapshotter<TMessageQueue>::postfixFilename(string & file)
 {
   size_t ind = file.rfind(".bag");
   // If requested ends in .bag, this is literal name do not append date
@@ -574,8 +579,9 @@ bool Snapshotter::postfixFilename(string & file)
   file += timeAsStr() + ".bag";
   return true;
 }
+template bool Snapshotter<MessageQueue>::postfixFilename(string & file);
 
-string Snapshotter::timeAsStr()
+template <class TMessageQueue> string Snapshotter<TMessageQueue>::timeAsStr()
 {
   std::stringstream msg;
   const auto now = std::chrono::system_clock::now();
@@ -583,10 +589,11 @@ string Snapshotter::timeAsStr()
   msg << std::put_time(std::localtime(&now_in_t), "%Y-%m-%d-%H-%M-%S");
   return msg.str();
 }
+template string Snapshotter<MessageQueue>::timeAsStr();
 
-void Snapshotter::topicCb(
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::topicCb(
   std::shared_ptr<const rclcpp::SerializedMessage> msg,
-  std::shared_ptr<MessageQueue> queue)
+  std::shared_ptr<TMessageQueue> queue)
 {
   // If recording is paused (or writing), exit
   {
@@ -600,10 +607,13 @@ void Snapshotter::topicCb(
   SnapshotMessage out(msg, now());
   queue->push(out);
 }
+template void Snapshotter<MessageQueue>::topicCb(
+  std::shared_ptr<const rclcpp::SerializedMessage> msg,
+  std::shared_ptr<MessageQueue> queue);
 
-void Snapshotter::subscribe(
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::subscribe(
   const TopicDetails & topic_details,
-  std::shared_ptr<MessageQueue> queue)
+  std::shared_ptr<TMessageQueue> queue)
 {
   RCLCPP_INFO(get_logger(), "Subscribing to %s", topic_details.name.c_str());
 
@@ -621,10 +631,13 @@ void Snapshotter::subscribe(
 
   queue->setSubscriber(sub);
 }
+template void Snapshotter<MessageQueue>::subscribe(
+  const TopicDetails & topic_details,
+  std::shared_ptr<MessageQueue> queue);
 
-bool Snapshotter::writeTopic(
+template <class TMessageQueue> bool Snapshotter<TMessageQueue>::writeTopic(
   rosbag2_cpp::Writer & bag_writer,
-  MessageQueue & message_queue,
+  TMessageQueue & message_queue,
   const TopicDetails & topic_details,
   const TriggerSnapshot::Request::SharedPtr & req,
   const TriggerSnapshot::Response::SharedPtr & res)
@@ -661,13 +674,21 @@ bool Snapshotter::writeTopic(
 
   return true;
 }
+template bool Snapshotter<MessageQueue>::writeTopic(
+  rosbag2_cpp::Writer & bag_writer,
+  MessageQueue & message_queue,
+  const TopicDetails & topic_details,
+  const TriggerSnapshot::Request::SharedPtr & req,
+  const TriggerSnapshot::Response::SharedPtr & res);
 
-MessageQueue * Snapshotter::create_message_queue(const SnapshotterTopicOptions & options)
+template <class TMessageQueue> MessageQueue * Snapshotter<TMessageQueue>::create_message_queue(const SnapshotterTopicOptions & options)
 {
+  RCLCPP_DEBUG(this->get_logger(), "Snapshotter::create_message_queue()");
   return new MessageQueue(options, this->get_logger());
 }
+template MessageQueue * Snapshotter<MessageQueue>::create_message_queue(const SnapshotterTopicOptions & options);
 
-void Snapshotter::triggerSnapshotCb(
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::triggerSnapshotCb(
   const std::shared_ptr<rmw_request_id_t> request_header,
   const TriggerSnapshot::Request::SharedPtr req,
   TriggerSnapshot::Response::SharedPtr res)
@@ -735,7 +756,7 @@ void Snapshotter::triggerSnapshotCb(
         continue;
       }
 
-      MessageQueue & message_queue = *(found->second);
+      TMessageQueue & message_queue = *(found->second);
 
       if (!writeTopic(bag_writer, message_queue, details, req, res)) {
         res->success = false;
@@ -744,8 +765,8 @@ void Snapshotter::triggerSnapshotCb(
       }
     }
   } else {  // If topic list empty, record all buffered topics
-    for (const buffers_t::value_type & pair : buffers_) {
-      MessageQueue & message_queue = *(pair.second);
+    for (const auto & pair : buffers_) {
+      TMessageQueue & message_queue = *(pair.second);
       if (!writeTopic(bag_writer, message_queue, pair.first, req, res)) {
         res->success = false;
         res->message = "Failed to write topic " + pair.first.name + " to bag file.";
@@ -765,28 +786,35 @@ void Snapshotter::triggerSnapshotCb(
 
   res->success = true;
 }
+template void Snapshotter<MessageQueue>::triggerSnapshotCb(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const TriggerSnapshot::Request::SharedPtr req,
+  TriggerSnapshot::Response::SharedPtr res);
 
-void Snapshotter::clear()
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::clear()
 {
-  for (const buffers_t::value_type & pair : buffers_) {
+  for (const auto & pair : buffers_) {
     pair.second->clear();
   }
 }
+template void Snapshotter<MessageQueue>::clear();
 
-void Snapshotter::pause()
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::pause()
 {
   RCLCPP_INFO(get_logger(), "Buffering paused");
   recording_ = false;
 }
+template void Snapshotter<MessageQueue>::pause();
 
-void Snapshotter::resume()
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::resume()
 {
   clear();
   recording_ = true;
   RCLCPP_INFO(get_logger(), "Buffering resumed and old data cleared.");
 }
+template void Snapshotter<MessageQueue>::resume();
 
-void Snapshotter::enableCb(
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::enableCb(
   const std::shared_ptr<rmw_request_id_t> request_header,
   const SetBool::Request::SharedPtr req,
   SetBool::Response::SharedPtr res)
@@ -814,8 +842,12 @@ void Snapshotter::enableCb(
 
   res->success = true;
 }
+template void Snapshotter<MessageQueue>::enableCb(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const SetBool::Request::SharedPtr req,
+  SetBool::Response::SharedPtr res);
 
-void Snapshotter::pollTopics()
+template <class TMessageQueue> void Snapshotter<TMessageQueue>::pollTopics()
 {
   const auto topic_names_and_types = get_topic_names_and_types();
 
@@ -840,14 +872,14 @@ void Snapshotter::pollTopics()
       msg_queue_t queue;
       queue.reset(this->create_message_queue(topic_options));
 
-      std::pair<buffers_t::iterator,
-        bool> res = buffers_.emplace(details, queue);
+      auto res = buffers_.emplace(details, queue);
 
       assert(res.second);
       subscribe(details, queue);
     }
   }
 }
+template void Snapshotter<MessageQueue>::pollTopics();
 
 SnapshotterClient::SnapshotterClient(const rclcpp::NodeOptions & options)
 : rclcpp::Node("snapshotter_client", options)
@@ -1036,5 +1068,5 @@ void SnapshotterClient::setSnapshotterClientOptions(const SnapshotterClientOptio
 }  // namespace rosbag2_snapshot
 
 #include <rclcpp_components/register_node_macro.hpp>  // NOLINT
-RCLCPP_COMPONENTS_REGISTER_NODE(rosbag2_snapshot::Snapshotter)
+RCLCPP_COMPONENTS_REGISTER_NODE(rosbag2_snapshot::Snapshotter<rosbag2_snapshot::MessageQueue>)
 RCLCPP_COMPONENTS_REGISTER_NODE(rosbag2_snapshot::SnapshotterClient)

@@ -249,3 +249,5 @@ int main(int argc, char ** argv)
   rosbag2_snapshot::Snapshotter snapshotter(opts);
   return snapshotter.run();
 }
+
+template class Snapshotter<MessageQueue>;

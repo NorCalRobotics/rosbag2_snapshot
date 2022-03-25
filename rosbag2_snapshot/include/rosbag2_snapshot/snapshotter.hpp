@@ -84,7 +84,7 @@ struct TopicDetails
   }
 };
 
-class Snapshotter;
+template <class TMessageQueue> class Snapshotter;
 
 /* Configuration for a single topic in the Snapshotter node. Holds
  * the buffer limits for a topic by duration (time difference between newest and oldest message)
@@ -190,7 +190,7 @@ protected:
  */
 class MessageQueue
 {
-  friend Snapshotter;
+  friend Snapshotter<MessageQueue>;
   friend MessageQueueCollectionManager;
 
 protected:
@@ -250,22 +250,24 @@ private:
 // The node can be triggered to write some or all of these buffers to a bag
 // file via a service call. Useful in live testing scenerios where interesting
 // data may be produced before a user has the oppurtunity to "rosbag record" the data.
-class Snapshotter : public rclcpp::Node
+template <class TMessageQueue> class Snapshotter : public rclcpp::Node
 {
+  static_assert(std::is_base_of<MessageQueue, TMessageQueue>::value, "TMessageQueue must inherit from MessageQueue");
+
 public:
   explicit Snapshotter(const rclcpp::NodeOptions & options);
   ~Snapshotter();
 
 protected:
-  typedef std::shared_ptr<MessageQueue> msg_queue_t;
+  typedef std::shared_ptr<TMessageQueue> msg_queue_t;
   typedef std::map<TopicDetails, msg_queue_t> buffers_t;
   buffers_t & get_message_queue_map(){ return this->buffers_; }
-  virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
+  MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
   SnapshotterOptions options_;
   // Convert parameter values into a SnapshotterOptions object
-  void parseOptionsFromParams();
+  virtual void parseOptionsFromParams();
   // Called on new message from any configured topic. Adds to queue for that topic
-  void topicCb(
+  virtual void topicCb(
     std::shared_ptr<const rclcpp::SerializedMessage> msg,
     msg_queue_t queue);
 
@@ -297,7 +299,7 @@ private:
   // Subscribe to one of the topics, setting up the callback to add to the respective queue
   void subscribe(
     const TopicDetails & topic_details,
-    std::shared_ptr<MessageQueue> queue);
+    std::shared_ptr<TMessageQueue> queue);
   // Service callback, write all of part of the internal buffers to a bag file
   // according to request parameters
   void triggerSnapshotCb(
@@ -322,7 +324,7 @@ private:
   // If returns false, there was an error opening/writing the bag and an error message
   // was written to res.message
   bool writeTopic(
-    rosbag2_cpp::Writer & bag_writer, MessageQueue & message_queue,
+    rosbag2_cpp::Writer & bag_writer, TMessageQueue & message_queue,
     const TopicDetails & topic_details,
     const rosbag2_snapshot_msgs::srv::TriggerSnapshot::Request::SharedPtr & req,
     const rosbag2_snapshot_msgs::srv::TriggerSnapshot::Response::SharedPtr & res);
