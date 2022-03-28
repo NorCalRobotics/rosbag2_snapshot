@@ -78,7 +78,8 @@ public:
       string topic{pair.first.name}, type{pair.first.type};
       fixTopicOptions(pair.second);
       msg_queue_t queue;
-      queue.reset(this->create_message_queue(pair.second));
+      auto p_new_queue = dynamic_cast<TMessageQueue *>(this->create_message_queue(pair.second));
+      queue.reset(p_new_queue);
 
       TopicDetails details{};
       details.name = topic;
@@ -117,7 +118,7 @@ public:
 protected:
   typedef std::shared_ptr<TMessageQueue> msg_queue_t;
   typedef std::map<TopicDetails, msg_queue_t> buffers_t;
-  MessageQueue * create_message_queue(const SnapshotterTopicOptions & options)
+  virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options)
   {
     RCLCPP_DEBUG(this->get_logger(), "Snapshotter::create_message_queue()");
     return new MessageQueue(options, this->get_logger());
@@ -483,7 +484,8 @@ private:
         SnapshotterTopicOptions topic_options;
         fixTopicOptions(topic_options);
         msg_queue_t queue;
-        queue.reset(this->create_message_queue(topic_options));
+        auto p_new_queue = dynamic_cast<TMessageQueue *>(this->create_message_queue(topic_options));
+        queue.reset(p_new_queue);
 
         auto res = buffers_.emplace(details, queue);
 
