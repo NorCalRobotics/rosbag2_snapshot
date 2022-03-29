@@ -77,8 +77,10 @@ public:
     for (auto & pair : options_.topics_) {
       string topic{pair.first.name}, type{pair.first.type};
       fixTopicOptions(pair.second);
+      auto p_new_base_queue = this->create_message_queue(pair.second);
+      auto p_new_queue = dynamic_cast<TMessageQueue *>(p_new_base_queue);
+      assert(p_new_queue != NULL);
       msg_queue_t queue;
-      auto p_new_queue = dynamic_cast<TMessageQueue *>(this->create_message_queue(pair.second));
       queue.reset(p_new_queue);
 
       TopicDetails details{};
@@ -300,11 +302,15 @@ private:
     opts.topic_stats_options.state = rclcpp::TopicStatisticsState::Enable;
     opts.topic_stats_options.publish_topic = topic_details.name + "/statistics";
 
+    auto sub_cb_f = [this, queue](std::shared_ptr<const rclcpp::SerializedMessage> msg){
+      this->topicCb(msg, queue);
+    };
+
     auto sub = create_generic_subscription(
       topic_details.name,
       topic_details.type,
       rclcpp::QoS{10},
-      std::bind(&Snapshotter::topicCb, this, _1, queue),
+      sub_cb_f,
       opts
     );
 
@@ -483,8 +489,10 @@ private:
       if (options_.addTopic(details)) {
         SnapshotterTopicOptions topic_options;
         fixTopicOptions(topic_options);
+        auto p_new_base_queue = this->create_message_queue(topic_options);
+        auto p_new_queue = dynamic_cast<TMessageQueue *>(p_new_base_queue);
+        assert(p_new_queue != NULL);
         msg_queue_t queue;
-        auto p_new_queue = dynamic_cast<TMessageQueue *>(this->create_message_queue(topic_options));
         queue.reset(p_new_queue);
 
         auto res = buffers_.emplace(details, queue);
