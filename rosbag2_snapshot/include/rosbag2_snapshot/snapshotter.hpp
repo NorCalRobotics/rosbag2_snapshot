@@ -229,6 +229,8 @@ public:
 
   // Return the total message size including the meta-information
   int64_t getMessageSize(SnapshotMessage const & msg) const;
+  static MessageQueue * create_message_queue
+    (Snapshotter<MessageQueue> * p_node, const SnapshotterTopicOptions & options);
 
 protected:
   virtual rclcpp::Time get_oldest_message_time();

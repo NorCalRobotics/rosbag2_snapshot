@@ -2,7 +2,7 @@
 /// @author Gabriel Stewart
 /// @copyright UPower (c) 2022
 
-#include <rosbag2_snapshot/vme_message_queue.hpp>
+#include <rosbag2_snapshot/vme_snapshotter.hpp>
 
 VMeMessageQueue::VMeMessageQueue(vme_ns_state_t & ns_state, const SnapshotterTopicOptions & options, const rclcpp::Logger & logger) :
   MessageQueue(options, logger),
@@ -12,6 +12,14 @@ VMeMessageQueue::VMeMessageQueue(vme_ns_state_t & ns_state, const SnapshotterTop
 
 VMeMessageQueue::~VMeMessageQueue()
 {
+}
+
+MessageQueue * VMeMessageQueue::create_message_queue
+  (Snapshotter<VMeMessageQueue> * p_node, const SnapshotterTopicOptions & options)
+{
+  auto p_vme_node = dynamic_cast<VMeSnapshotter<VMeMessageQueue> *>(p_node);
+  assert(p_vme_node != NULL);
+  return p_vme_node->create_message_queue(options);
 }
 
 rclcpp::Time VMeMessageQueue::get_oldest_message_time()

@@ -64,6 +64,7 @@ static constexpr uint32_t MB_TO_B = 1e6;
 template <class TMessageQueue> class Snapshotter : public rclcpp::Node
 {
   static_assert(std::is_base_of<MessageQueue, TMessageQueue>::value, "TMessageQueue must inherit from MessageQueue");
+  friend TMessageQueue;
 
 public:
   explicit Snapshotter(const rclcpp::NodeOptions & options)
@@ -77,7 +78,7 @@ public:
     for (auto & pair : options_.topics_) {
       string topic{pair.first.name}, type{pair.first.type};
       fixTopicOptions(pair.second);
-      auto p_new_base_queue = this->create_message_queue(pair.second);
+      auto p_new_base_queue = TMessageQueue::create_message_queue(this, pair.second);
       auto p_new_queue = dynamic_cast<TMessageQueue *>(p_new_base_queue);
       assert(p_new_queue != NULL);
       msg_queue_t queue;
@@ -489,7 +490,7 @@ private:
       if (options_.addTopic(details)) {
         SnapshotterTopicOptions topic_options;
         fixTopicOptions(topic_options);
-        auto p_new_base_queue = this->create_message_queue(topic_options);
+        auto p_new_base_queue = TMessageQueue::create_message_queue(this, topic_options);
         auto p_new_queue = dynamic_cast<TMessageQueue *>(p_new_base_queue);
         assert(p_new_queue != NULL);
         msg_queue_t queue;

@@ -9,6 +9,8 @@
 
 template <class TMessageQueue>
 class Test1VerboseVMeSnapshotter : public VMeSnapshotter<TMessageQueue> {
+  friend TMessageQueue;
+
 public:
   explicit Test1VerboseVMeSnapshotter(const rclcpp::NodeOptions &options, std::experimental::filesystem::v1::__cxx11::path vme_device) :
     VMeSnapshotter<TMessageQueue>(options, vme_device)

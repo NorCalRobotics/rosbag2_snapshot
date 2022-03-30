@@ -256,6 +256,17 @@ MessageQueue::~MessageQueue(){
   MessageQueueCollectionManager::Instance(*this).report_queue_destruction(*this);
 }
 
+MessageQueue * MessageQueue::create_message_queue
+  (Snapshotter<MessageQueue> * p_node, const SnapshotterTopicOptions & options)
+{
+  return p_node->create_message_queue(options);
+  /*
+  auto logger = p_node->get_logger();
+  RCLCPP_DEBUG(logger, "MessageQueue::create_message_queue()");
+  return new MessageQueue(options, logger);
+  */
+}
+
 rclcpp::Time MessageQueue::get_oldest_message_time()
 {
   return this->queue_.at(0).time;

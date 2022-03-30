@@ -49,6 +49,8 @@ typedef union{
 template <class TMessageQueue>
 class VMeSnapshotter : public Snapshotter<TMessageQueue>
 {
+  friend TMessageQueue;
+
 public:
   explicit VMeSnapshotter(const rclcpp::NodeOptions & options, fs::path vme_device) :
     Snapshotter<TMessageQueue>(options)
@@ -277,19 +279,6 @@ public:
   }
 
 protected:
-  vme_ns_state_t create_queue_vme_ns_state(vme_topic_offsets_t * p_offsets=NULL, std::mutex * p_lock=NULL)
-  {
-    return {
-      p_offsets,
-      this->vme_device_,
-      &(this->header_.linked_list.next_write_offset),
-      &(this->header_.linked_list.ns_usable_offset),
-      &(this->header_.linked_list.topic_offsets_offset),
-      p_lock,
-      &(this->open_buffer_state)
-    };
-  }
-
   virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options) override
   {
     RCLCPP_DEBUG(this->get_logger(), "VMeSnapshotter::create_message_queue()");
@@ -301,6 +290,19 @@ protected:
     // Returning an instance of VMeMessageQueue instead of a MessageQueue,
     // VMeMessageQueue extends MessageQueue
     return new VMeMessageQueue(vme_ns_state, options, this->get_logger());
+  }
+
+  vme_ns_state_t create_queue_vme_ns_state(vme_topic_offsets_t * p_offsets=NULL, std::mutex * p_lock=NULL)
+  {
+    return {
+      p_offsets,
+      this->vme_device_,
+      &(this->header_.linked_list.next_write_offset),
+      &(this->header_.linked_list.ns_usable_offset),
+      &(this->header_.linked_list.topic_offsets_offset),
+      p_lock,
+      &(this->open_buffer_state)
+    };
   }
 
   FILE * vme_device_;

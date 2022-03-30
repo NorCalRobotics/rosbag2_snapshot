@@ -42,6 +42,8 @@ public:
   ~VMeMessageQueue();
 
   vme_ns_state_t & vme_ns_state;
+  static MessageQueue * create_message_queue
+    (Snapshotter<VMeMessageQueue> * p_node, const SnapshotterTopicOptions & options);
 
 protected:
   void invalidate_message(entry_relationship_type_t rel_type = FILE_SEQUENTIAL, entry_relationship_direction_t rel_dir = NEXT);
