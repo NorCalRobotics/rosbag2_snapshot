@@ -283,6 +283,7 @@ private:
     trigger_snapshot_server_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_server_;
   rclcpp::TimerBase::SharedPtr poll_topic_timer_;
+  rclcpp::TimerBase::SharedPtr init_timer_;
 
   // Replace individual topic limits with node defaults if they are
   // flagged for it (see SnapshotterTopicOptions)

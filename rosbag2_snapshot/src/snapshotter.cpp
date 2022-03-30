@@ -413,24 +413,31 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
 {
   parseOptionsFromParams();
 
-  // Create the queue for each topic and set up the subscriber to add to it on new messages
-  for (auto & pair : options_.topics_) {
-    string topic{pair.first.name}, type{pair.first.type};
-    fixTopicOptions(pair.second);
-    msg_queue_t queue;
-    queue.reset(this->create_message_queue(pair.second));
+  auto cb1 = [this](){
+    init_timer_->cancel();
 
-    TopicDetails details{};
-    details.name = topic;
-    details.type = type;
+    // Create the queue for each topic and set up the subscriber to add to it on new messages
+    for (auto & pair : options_.topics_) {
+      string topic{pair.first.name}, type{pair.first.type};
+      fixTopicOptions(pair.second);
+      msg_queue_t queue;
+      queue.reset(this->create_message_queue(pair.second));
 
-    std::pair<buffers_t::iterator, bool> res =
-      buffers_.emplace(details, queue);
+      TopicDetails details{};
+      details.name = topic;
+      details.type = type;
 
-    assert(res.second);
+      std::pair<buffers_t::iterator, bool> res =
+        buffers_.emplace(details, queue);
 
-    subscribe(details, queue);
-  }
+      assert(res.second);
+
+      subscribe(details, queue);
+    }
+  };
+  // This procedure should be completed outisde of the constructor so that
+  // virtual function calls will be virtual rather than final.
+  init_timer_ = create_wall_timer(5ms, cb1);
 
   // Now that subscriptions are setup, setup service servers for writing and pausing
   trigger_snapshot_server_ = create_service<TriggerSnapshot>(
