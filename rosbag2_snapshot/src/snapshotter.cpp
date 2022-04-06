@@ -72,8 +72,11 @@ static constexpr uint32_t MB_TO_B = 1e6;
 
 SnapshotterTopicOptions::SnapshotterTopicOptions(
   rclcpp::Duration duration_limit,
-  int32_t memory_limit)
-: duration_limit_(duration_limit), memory_limit_(memory_limit)
+  int32_t memory_limit,
+  int64_t system_wide_memory_limit)
+: duration_limit_(duration_limit),
+  memory_limit_(memory_limit),
+  system_wide_memory_limit_(system_wide_memory_limit)
 {
 }
 

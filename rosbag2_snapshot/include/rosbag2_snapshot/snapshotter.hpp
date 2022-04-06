@@ -114,7 +114,8 @@ struct SnapshotterTopicOptions
 
   SnapshotterTopicOptions(
     rclcpp::Duration duration_limit = INHERIT_DURATION_LIMIT,
-    int32_t memory_limit = INHERIT_MEMORY_LIMIT);
+    int32_t memory_limit = INHERIT_MEMORY_LIMIT,
+    int64_t system_wide_memory_limit = INHERIT_MEMORY_LIMIT);
 };
 
 /* Configuration for the Snapshotter node. Contains default limits for memory and duration
