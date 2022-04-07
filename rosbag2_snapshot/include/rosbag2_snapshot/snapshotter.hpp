@@ -262,6 +262,7 @@ protected:
   typedef std::map<TopicDetails, msg_queue_t> buffers_t;
   buffers_t & get_message_queue_map(){ return this->buffers_; }
   virtual MessageQueue * create_message_queue(const SnapshotterTopicOptions & options);
+  virtual void queues_initialization();
   SnapshotterOptions options_;
   // Convert parameter values into a SnapshotterOptions object
   void parseOptionsFromParams();

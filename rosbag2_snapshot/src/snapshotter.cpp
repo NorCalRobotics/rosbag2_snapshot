@@ -418,27 +418,9 @@ Snapshotter::Snapshotter(const rclcpp::NodeOptions & options)
 
   auto cb1 = [this](){
     init_timer_->cancel();
-
-    // Create the queue for each topic and set up the subscriber to add to it on new messages
-    for (auto & pair : options_.topics_) {
-      string topic{pair.first.name}, type{pair.first.type};
-      fixTopicOptions(pair.second);
-      msg_queue_t queue;
-      queue.reset(this->create_message_queue(pair.second));
-
-      TopicDetails details{};
-      details.name = topic;
-      details.type = type;
-
-      std::pair<buffers_t::iterator, bool> res =
-        buffers_.emplace(details, queue);
-
-      assert(res.second);
-
-      subscribe(details, queue);
-    }
+    this->queues_initialization();
   };
-  // This procedure should be completed outisde of the constructor so that
+  // This procedure should be completed outside of the constructor so that
   // virtual function calls will be virtual rather than final.
   init_timer_ = create_wall_timer(5ms, cb1);
 
@@ -461,6 +443,27 @@ Snapshotter::~Snapshotter()
 {
   for (auto & buffer : buffers_) {
     buffer.second->sub_.reset();
+  }
+}
+
+void Snapshotter::queues_initialization(){
+  // Create the queue for each topic and set up the subscriber to add to it on new messages
+  for (auto & pair : options_.topics_) {
+    string topic{pair.first.name}, type{pair.first.type};
+    fixTopicOptions(pair.second);
+    msg_queue_t queue;
+    queue.reset(this->create_message_queue(pair.second));
+
+    TopicDetails details{};
+    details.name = topic;
+    details.type = type;
+
+    std::pair<buffers_t::iterator, bool> res =
+      buffers_.emplace(details, queue);
+
+    assert(res.second);
+
+    subscribe(details, queue);
   }
 }
 
